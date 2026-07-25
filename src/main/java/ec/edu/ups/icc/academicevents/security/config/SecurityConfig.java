@@ -12,17 +12,36 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import ec.edu.ups.icc.academicevents.security.filters.JwtAuthenticationFilter;
+import ec.edu.ups.icc.academicevents.security.handlers.CustomAccessDeniedHandler;
+import ec.edu.ups.icc.academicevents.security.handlers.CustomAuthenticationEntryPoint;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     private final CustomUserDetailsService customUserDetailsService;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+
+    private final CustomAccessDeniedHandler accessDeniedHandler;
 
     public SecurityConfig(
-            CustomUserDetailsService customUserDetailsService
-    ) {
+            CustomUserDetailsService customUserDetailsService,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            CustomAuthenticationEntryPoint authenticationEntryPoint,
+            CustomAccessDeniedHandler accessDeniedHandler) {
+
         this.customUserDetailsService = customUserDetailsService;
+
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+
+        this.authenticationEntryPoint = authenticationEntryPoint;
+
+        this.accessDeniedHandler = accessDeniedHandler;
     }
 
     @Bean
@@ -32,10 +51,8 @@ public class SecurityConfig {
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider(
-            PasswordEncoder passwordEncoder
-    ) {
-        DaoAuthenticationProvider provider =
-                new DaoAuthenticationProvider(customUserDetailsService);
+            PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(customUserDetailsService);
 
         provider.setPasswordEncoder(passwordEncoder);
 
@@ -44,25 +61,21 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authenticationConfiguration
-    ) throws Exception {
+            AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            DaoAuthenticationProvider authenticationProvider
-    ) throws Exception {
+            DaoAuthenticationProvider authenticationProvider) throws Exception {
 
         http
                 .csrf(csrf -> csrf.disable())
 
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
+                                SessionCreationPolicy.STATELESS))
 
                 .authenticationProvider(authenticationProvider)
 
@@ -75,12 +88,23 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/error"
-                        ).permitAll()
+                                "/error")
+                        .permitAll()
 
-                        .anyRequest().authenticated()
+                        .anyRequest().authenticated())
+                .exceptionHandling(exception -> exception
+
+                        .authenticationEntryPoint(
+                                authenticationEntryPoint)
+                        .accessDeniedHandler(
+                                accessDeniedHandler)
+
+                )
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+
+                        UsernamePasswordAuthenticationFilter.class
                 );
-
         return http.build();
     }
 }
