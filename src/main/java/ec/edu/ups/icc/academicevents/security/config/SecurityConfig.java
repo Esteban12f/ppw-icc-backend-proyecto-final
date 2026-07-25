@@ -1,8 +1,13 @@
 package ec.edu.ups.icc.academicevents.security.config;
 
+import ec.edu.ups.icc.academicevents.security.filters.JwtAuthenticationFilter;
+import ec.edu.ups.icc.academicevents.security.handlers.CustomAccessDeniedHandler;
+import ec.edu.ups.icc.academicevents.security.handlers.CustomAuthenticationEntryPoint;
 import ec.edu.ups.icc.academicevents.security.services.CustomUserDetailsService;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -14,98 +19,174 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import ec.edu.ups.icc.academicevents.security.filters.JwtAuthenticationFilter;
-import ec.edu.ups.icc.academicevents.security.handlers.CustomAccessDeniedHandler;
-import ec.edu.ups.icc.academicevents.security.handlers.CustomAuthenticationEntryPoint;
-
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final CustomUserDetailsService customUserDetailsService;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomUserDetailsService
+            customUserDetailsService;
 
-    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final JwtAuthenticationFilter
+            jwtAuthenticationFilter;
 
-    private final CustomAccessDeniedHandler accessDeniedHandler;
+    private final CustomAuthenticationEntryPoint
+            authenticationEntryPoint;
+
+    private final CustomAccessDeniedHandler
+            accessDeniedHandler;
 
     public SecurityConfig(
             CustomUserDetailsService customUserDetailsService,
             JwtAuthenticationFilter jwtAuthenticationFilter,
             CustomAuthenticationEntryPoint authenticationEntryPoint,
-            CustomAccessDeniedHandler accessDeniedHandler) {
+            CustomAccessDeniedHandler accessDeniedHandler
+    ) {
+        this.customUserDetailsService =
+                customUserDetailsService;
 
-        this.customUserDetailsService = customUserDetailsService;
+        this.jwtAuthenticationFilter =
+                jwtAuthenticationFilter;
 
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.authenticationEntryPoint =
+                authenticationEntryPoint;
 
-        this.authenticationEntryPoint = authenticationEntryPoint;
-
-        this.accessDeniedHandler = accessDeniedHandler;
+        this.accessDeniedHandler =
+                accessDeniedHandler;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+
         return new BCryptPasswordEncoder(12);
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider(
-            PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(customUserDetailsService);
+    public DaoAuthenticationProvider
+    authenticationProvider(
+            PasswordEncoder passwordEncoder
+    ) {
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider(
+                        customUserDetailsService
+                );
 
-        provider.setPasswordEncoder(passwordEncoder);
+        provider.setPasswordEncoder(
+                passwordEncoder
+        );
 
         return provider;
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
+    public AuthenticationManager
+    authenticationManager(
+            AuthenticationConfiguration configuration
+    ) throws Exception {
+
+        return configuration
+                .getAuthenticationManager();
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            DaoAuthenticationProvider authenticationProvider) throws Exception {
+            DaoAuthenticationProvider
+                    authenticationProvider
+    ) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable())
-
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS))
-
-                .authenticationProvider(authenticationProvider)
-
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(
-                                "/auth/register",
-                                "/auth/login",
-                                "/auth/refresh",
-                                "/auth/logout",
-                                "/actuator/health",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/error")
-                        .permitAll()
-
-                        .anyRequest().authenticated())
-                .exceptionHandling(exception -> exception
-
-                        .authenticationEntryPoint(
-                                authenticationEntryPoint)
-                        .accessDeniedHandler(
-                                accessDeniedHandler)
-
+                .csrf(csrf ->
+                        csrf.disable()
                 )
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
+                .authenticationProvider(
+                        authenticationProvider
+                )
+
+                .authorizeHttpRequests(authorize ->
+                        authorize
+
+                                .requestMatchers(
+                                        "/auth/register",
+                                        "/auth/login",
+                                        "/auth/refresh",
+                                        "/auth/logout",
+                                        "/actuator/health",
+                                        "/v3/api-docs/**",
+                                        "/swagger-ui/**",
+                                        "/swagger-ui.html",
+                                        "/error"
+                                )
+                                .permitAll()
+
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/categories",
+                                        "/events",
+                                        "/events/**"
+                                )
+                                .permitAll()
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/events"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN",
+                                        "ORGANIZER",
+                                        "ROLE_ADMIN",
+                                        "ROLE_ORGANIZER"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.PUT,
+                                        "/events/**"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN",
+                                        "ORGANIZER",
+                                        "ROLE_ADMIN",
+                                        "ROLE_ORGANIZER"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/events/**"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN",
+                                        "ORGANIZER",
+                                        "ROLE_ADMIN",
+                                        "ROLE_ORGANIZER"
+                                )
+
+                                .anyRequest()
+                                .authenticated()
+                )
+
+                .exceptionHandling(exception ->
+                        exception
+
+                                .authenticationEntryPoint(
+                                        authenticationEntryPoint
+                                )
+
+                                .accessDeniedHandler(
+                                        accessDeniedHandler
+                                )
+                )
+
                 .addFilterBefore(
                         jwtAuthenticationFilter,
-
                         UsernamePasswordAuthenticationFilter.class
                 );
+
         return http.build();
     }
 }
