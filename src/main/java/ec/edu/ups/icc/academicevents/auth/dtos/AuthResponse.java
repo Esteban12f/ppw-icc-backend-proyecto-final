@@ -1,43 +1,39 @@
 package ec.edu.ups.icc.academicevents.auth.dtos;
 
-
-
 public class AuthResponse {
 
+    private final String accessToken;
 
-    private String accessToken;
+    private final String refreshToken;
 
-    private String tokenType;
+    private final String tokenType;
 
-    private Long expiresIn;
-
-
+    private final Long expiresIn;
 
     public AuthResponse(
             String accessToken,
+            String refreshToken,
             Long expiresIn
-    ){
-
-        this.accessToken=accessToken;
-
-        this.tokenType="Bearer";
-
-        this.expiresIn=expiresIn;
+    ) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.tokenType = "Bearer";
+        this.expiresIn = expiresIn;
     }
 
-
-    public String getAccessToken(){
+    public String getAccessToken() {
         return accessToken;
     }
 
+    public String getRefreshToken() {
+        return refreshToken;
+    }
 
-    public String getTokenType(){
+    public String getTokenType() {
         return tokenType;
     }
 
-
-    public Long getExpiresIn(){
+    public Long getExpiresIn() {
         return expiresIn;
     }
-
 }

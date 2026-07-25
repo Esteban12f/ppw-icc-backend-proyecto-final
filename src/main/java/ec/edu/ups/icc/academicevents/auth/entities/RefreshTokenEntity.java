@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(name = "refresh_tokens")
@@ -21,6 +22,13 @@ public class RefreshTokenEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(
+            name = "token_id",
+            nullable = false,
+            unique = true
+    )
+    private UUID tokenId;
 
     @ManyToOne(
             fetch = FetchType.LAZY,
@@ -46,9 +54,7 @@ public class RefreshTokenEntity {
     )
     private OffsetDateTime expiresAt;
 
-    @Column(
-            name = "revoked_at"
-    )
+    @Column(name = "revoked_at")
     private OffsetDateTime revokedAt;
 
     @Column(
@@ -59,21 +65,28 @@ public class RefreshTokenEntity {
     )
     private OffsetDateTime createdAt;
 
-    public RefreshTokenEntity() {
-    }
+    @Column(
+            name = "created_by_ip",
+            length = 45
+    )
+    private String createdByIp;
 
-    public RefreshTokenEntity(
-            UserEntity user,
-            String tokenHash,
-            OffsetDateTime expiresAt
-    ) {
-        this.user = user;
-        this.tokenHash = tokenHash;
-        this.expiresAt = expiresAt;
+    @Column(name = "replaced_by_token_id")
+    private UUID replacedByTokenId;
+
+    public RefreshTokenEntity() {
     }
 
     public Long getId() {
         return id;
+    }
+
+    public UUID getTokenId() {
+        return tokenId;
+    }
+
+    public void setTokenId(UUID tokenId) {
+        this.tokenId = tokenId;
     }
 
     public UserEntity getUser() {
@@ -112,12 +125,29 @@ public class RefreshTokenEntity {
         return createdAt;
     }
 
+    public String getCreatedByIp() {
+        return createdByIp;
+    }
+
+    public void setCreatedByIp(String createdByIp) {
+        this.createdByIp = createdByIp;
+    }
+
+    public UUID getReplacedByTokenId() {
+        return replacedByTokenId;
+    }
+
+    public void setReplacedByTokenId(UUID replacedByTokenId) {
+        this.replacedByTokenId = replacedByTokenId;
+    }
+
     public boolean isRevoked() {
         return revokedAt != null;
     }
 
     public boolean isExpired() {
-        return expiresAt.isBefore(OffsetDateTime.now());
+        return expiresAt == null
+                || !expiresAt.isAfter(OffsetDateTime.now());
     }
 
     public boolean isValid() {
@@ -125,7 +155,9 @@ public class RefreshTokenEntity {
     }
 
     public void revoke() {
-        this.revokedAt = OffsetDateTime.now();
+        if (revokedAt == null) {
+            revokedAt = OffsetDateTime.now();
+        }
     }
 
     @Override
@@ -138,7 +170,8 @@ public class RefreshTokenEntity {
             return false;
         }
 
-        return id != null && Objects.equals(id, tokenEntity.id);
+        return id != null
+                && Objects.equals(id, tokenEntity.id);
     }
 
     @Override
