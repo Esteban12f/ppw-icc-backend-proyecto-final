@@ -1,18 +1,14 @@
 package ec.edu.ups.icc.academicevents.audit.entities;
 
-import ec.edu.ups.icc.academicevents.users.entities.UserEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
-import java.time.OffsetDateTime;
-import java.util.Objects;
+import java.time.Instant;
 
 @Entity
 @Table(name = "audit_logs")
@@ -22,84 +18,51 @@ public class AuditLogEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private UserEntity user;
+    @Column(name = "actor_id")
+    private Long userId;
 
-    @Column(
-            name = "action",
-            nullable = false,
-            length = 100
-    )
+    @Column(name = "action", nullable = false)
     private String action;
 
-    @Column(
-            name = "entity_type",
-            length = 100
-    )
+    @Column(name = "resource_type")
     private String entityType;
 
-    @Column(name = "entity_id")
+    @Column(name = "resource_id")
     private Long entityId;
 
-    @Column(
-            name = "result",
-            nullable = false,
-            length = 20
-    )
-    private String result;
-
-    @Column(
-            name = "details",
-            columnDefinition = "TEXT"
-    )
+    @Transient
     private String details;
 
-    @Column(
-            name = "ip_address",
-            length = 64
-    )
+    @Transient
     private String ipAddress;
 
+    @Transient
+    private String userAgent;
+
     @Column(
-            name = "created_at",
-            nullable = false,
-            insertable = false,
-            updatable = false
+        name = "created_at",
+        insertable = false,
+        updatable = false
     )
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     public AuditLogEntity() {
-    }
-
-    public AuditLogEntity(
-            UserEntity user,
-            String action,
-            String entityType,
-            Long entityId,
-            AuditResult result,
-            String details,
-            String ipAddress
-    ) {
-        this.user = user;
-        this.action = action;
-        this.entityType = entityType;
-        this.entityId = entityId;
-        this.result = result.name();
-        this.details = details;
-        this.ipAddress = ipAddress;
     }
 
     public Long getId() {
         return id;
     }
 
-    public UserEntity getUser() {
-        return user;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public void setUser(UserEntity user) {
-        this.user = user;
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     public String getAction() {
@@ -126,22 +89,6 @@ public class AuditLogEntity {
         this.entityId = entityId;
     }
 
-    public String getResult() {
-        return result;
-    }
-
-    public AuditResult getAuditResult() {
-        return AuditResult.valueOf(result);
-    }
-
-    public void setResult(String result) {
-        this.result = result;
-    }
-
-    public void setResult(AuditResult result) {
-        this.result = result.name();
-    }
-
     public String getDetails() {
         return details;
     }
@@ -158,25 +105,19 @@ public class AuditLogEntity {
         this.ipAddress = ipAddress;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public String getUserAgent() {
+        return userAgent;
+    }
+
+    public void setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
+    }
+
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-
-        if (!(object instanceof AuditLogEntity auditLogEntity)) {
-            return false;
-        }
-
-        return id != null && Objects.equals(id, auditLogEntity.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return getClass().hashCode();
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
     }
 }
