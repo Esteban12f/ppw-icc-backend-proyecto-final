@@ -657,7 +657,7 @@ INSERT INTO sessions (
     (12, 5, 'Presentación y premiación', 'Sustentación de proyectos y cierre.', CURRENT_TIMESTAMP + INTERVAL '46 days', CURRENT_TIMESTAMP + INTERVAL '46 days 4 hours', 'Auditorio Principal', NULL, CURRENT_TIMESTAMP - INTERVAL '22 days', CURRENT_TIMESTAMP - INTERVAL '2 days'),
 
     (13, 6, 'Amenazas en aplicaciones web', 'Sesión histórica de un evento finalizado.', CURRENT_TIMESTAMP - INTERVAL '40 days', CURRENT_TIMESTAMP - INTERVAL '40 days' + INTERVAL '3 hours', 'Auditorio Principal', 'https://meet.example.test/security-seminar/session-1', CURRENT_TIMESTAMP - INTERVAL '85 days', CURRENT_TIMESTAMP - INTERVAL '39 days'),
-    (14, 6, 'Autenticación y control de acceso', 'Sesión histórica de un evento finalizado.', CURRENT_TIMESTAMP - INTERVAL '39 days 7 hours', CURRENT_TIMESTAMP - INTERVAL '39 days 4 hours', 'Auditorio Principal', 'https://meet.example.test/security-seminar/session-2', CURRENT_TIMESTAMP - INTERVAL '85 days', CURRENT_TIMESTAMP - INTERVAL '39 days'),
+    (14, 6, 'Autenticación y control de acceso', 'Sesión histórica de un evento finalizado.', CURRENT_TIMESTAMP - INTERVAL '39 days 7 hours', CURRENT_TIMESTAMP - INTERVAL '39 days 5 hours', 'Auditorio Principal', 'https://meet.example.test/security-seminar/session-2', CURRENT_TIMESTAMP - INTERVAL '85 days', CURRENT_TIMESTAMP - INTERVAL '39 days'),
 
     (15, 7, 'Flujo colaborativo con Pull Requests', 'Sesión perteneciente a un evento cancelado.', CURRENT_TIMESTAMP + INTERVAL '10 days', CURRENT_TIMESTAMP + INTERVAL '10 days 4 hours', 'Laboratorio de Computación 1', NULL, CURRENT_TIMESTAMP - INTERVAL '35 days', CURRENT_TIMESTAMP - INTERVAL '2 days'),
 
@@ -739,7 +739,6 @@ INSERT INTO registrations (
     (44, '00000000-0000-4000-8000-000000000044', 10, 12, 'CONFIRMED', CURRENT_TIMESTAMP - INTERVAL '4 days', CURRENT_TIMESTAMP - INTERVAL '3 days', CURRENT_TIMESTAMP - INTERVAL '3 days', NULL, 0),
     (45, '00000000-0000-4000-8000-000000000045', 10, 15, 'CONFIRMED', CURRENT_TIMESTAMP - INTERVAL '3 days', CURRENT_TIMESTAMP - INTERVAL '2 days', CURRENT_TIMESTAMP - INTERVAL '2 days', NULL, 0);
 
-s
 -- --------------------------------------------------------------------------
 -- Auditoría de ejemplo
 -- --------------------------------------------------------------------------
