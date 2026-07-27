@@ -4,6 +4,12 @@ import ec.edu.ups.icc.academicevents.sessions.dtos.SessionRequest;
 import ec.edu.ups.icc.academicevents.sessions.dtos.SessionResponse;
 import ec.edu.ups.icc.academicevents.sessions.services.SessionService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
@@ -20,6 +26,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/events/{eventId}/sessions")
+@Tag(
+        name = "Sessions",
+        description = "Gestion de sesiones de eventos academicos"
+)
 public class EventSessionController {
 
     private final SessionService sessionService;
@@ -28,11 +38,47 @@ public class EventSessionController {
         this.sessionService = sessionService;
     }
 
+    @Operation(
+            summary = "Listar sesiones de un evento",
+            description = "Devuelve todas las sesiones del evento indicado, "
+                    + "ordenadas por fecha de inicio. Endpoint publico."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Listado de sesiones"),
+            @ApiResponse(responseCode = "404", description = "El evento no existe")
+    })
     @GetMapping
-    public ResponseEntity<List<SessionResponse>> findAllByEvent(@PathVariable Long eventId) {
+    public ResponseEntity<List<SessionResponse>> findAllByEvent(
+            @PathVariable Long eventId
+    ) {
         return ResponseEntity.ok(sessionService.findAllByEvent(eventId));
     }
 
+    @Operation(
+            summary = "Crear una sesion para un evento",
+            description = "Solo el ADMIN o el ORGANIZER propietario del "
+                    + "evento pueden crear sesiones. Las fechas deben caer "
+                    + "dentro del rango del evento.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Sesion creada"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Fechas invalidas o fuera del rango del evento"
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "El usuario no es ADMIN ni el organizador "
+                            + "propietario del evento"
+            ),
+            @ApiResponse(responseCode = "404", description = "El evento no existe"),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Ya existe una sesion con el mismo titulo y "
+                            + "fecha de inicio en ese evento"
+            )
+    })
     @PostMapping
     public ResponseEntity<SessionResponse> create(
             @PathVariable Long eventId,
