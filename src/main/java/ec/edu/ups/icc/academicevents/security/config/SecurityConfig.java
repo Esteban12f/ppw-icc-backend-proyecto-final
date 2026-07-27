@@ -165,6 +165,35 @@ public class SecurityConfig {
                                         "ROLE_ADMIN",
                                         "ROLE_ORGANIZER"
                                 )
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/sessions/**"
+                                )
+                                .permitAll()
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/events/*/sessions"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN", "ORGANIZER", "ROLE_ADMIN", "ROLE_ORGANIZER"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.PUT,
+                                        "/sessions/**"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN", "ORGANIZER", "ROLE_ADMIN", "ROLE_ORGANIZER"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/sessions/**"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN", "ORGANIZER", "ROLE_ADMIN", "ROLE_ORGANIZER"
+                                )
 
                                 .anyRequest()
                                 .authenticated()
