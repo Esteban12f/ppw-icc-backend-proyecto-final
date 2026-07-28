@@ -1,5 +1,7 @@
 package ec.edu.ups.icc.academicevents.registrations.repositories;
 
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -31,4 +33,14 @@ public interface RegistrationRepository
             Long eventId,
             Long participantId
     );
+    @EntityGraph(attributePaths = {"event", "participant"})
+    List<RegistrationEntity> findAllByEvent_IdAndRegisteredAtBetweenOrderByRegisteredAtAsc(
+            Long eventId,
+            OffsetDateTime from,
+            OffsetDateTime to
+    );
+
+
+
+
 }
