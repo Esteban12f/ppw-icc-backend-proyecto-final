@@ -15,6 +15,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
+import ec.edu.ups.icc.academicevents.ratelimit.RateLimitFilter;
 import ec.edu.ups.icc.academicevents.security.filters.JwtAuthenticationFilter;
 import ec.edu.ups.icc.academicevents.security.handlers.CustomAccessDeniedHandler;
 import ec.edu.ups.icc.academicevents.security.handlers.CustomAuthenticationEntryPoint;
@@ -94,7 +95,8 @@ public class SecurityConfig {
             DaoAuthenticationProvider
                     authenticationProvider,
             CorsConfigurationSource
-                    corsConfigurationSource
+                    corsConfigurationSource,
+            RateLimitFilter rateLimitFilter
     ) throws Exception {
 
         http
@@ -267,6 +269,11 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+
+                .addFilterAfter(
+                        rateLimitFilter,
+                        JwtAuthenticationFilter.class
                 );
 
         return http.build();
