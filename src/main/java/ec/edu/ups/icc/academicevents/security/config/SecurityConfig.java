@@ -1,10 +1,5 @@
 package ec.edu.ups.icc.academicevents.security.config;
 
-import ec.edu.ups.icc.academicevents.security.filters.JwtAuthenticationFilter;
-import ec.edu.ups.icc.academicevents.security.handlers.CustomAccessDeniedHandler;
-import ec.edu.ups.icc.academicevents.security.handlers.CustomAuthenticationEntryPoint;
-import ec.edu.ups.icc.academicevents.security.services.CustomUserDetailsService;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,6 +13,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import ec.edu.ups.icc.academicevents.security.filters.JwtAuthenticationFilter;
+import ec.edu.ups.icc.academicevents.security.handlers.CustomAccessDeniedHandler;
+import ec.edu.ups.icc.academicevents.security.handlers.CustomAuthenticationEntryPoint;
+import ec.edu.ups.icc.academicevents.security.services.CustomUserDetailsService;
 
 @Configuration
 @EnableMethodSecurity
@@ -125,6 +125,31 @@ public class SecurityConfig {
                                 )
                                 .permitAll()
 
+                                // IMPORTANTE: esta regla de registrations
+                                // debe ir ANTES que el permitAll() de
+                                // "/events/**" de mas abajo, porque
+                                // Spring Security usa la primera regla
+                                // que haga match con la ruta.
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/events/*/registrations"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN",
+                                        "ORGANIZER",
+                                        "ROLE_ADMIN",
+                                        "ROLE_ORGANIZER"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/events/*/registrations"
+                                )
+                                .hasAnyAuthority(
+                                        "PARTICIPANT",
+                                        "ROLE_PARTICIPANT"
+                                )
+
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/categories",
@@ -164,6 +189,43 @@ public class SecurityConfig {
                                         "ORGANIZER",
                                         "ROLE_ADMIN",
                                         "ROLE_ORGANIZER"
+                                )
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/sessions/**"
+                                )
+                                .permitAll()
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/events/*/sessions"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN", "ORGANIZER", "ROLE_ADMIN", "ROLE_ORGANIZER"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.PUT,
+                                        "/sessions/**"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN", "ORGANIZER", "ROLE_ADMIN", "ROLE_ORGANIZER"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.DELETE,
+                                        "/sessions/**"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN", "ORGANIZER", "ROLE_ADMIN", "ROLE_ORGANIZER"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.PATCH,
+                                        "/registrations/*/status"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN", "ORGANIZER", "ROLE_ADMIN", "ROLE_ORGANIZER"
                                 )
 
                                 .anyRequest()
