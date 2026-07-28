@@ -9,6 +9,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import ec.edu.ups.icc.academicevents.common.dtos.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,18 +21,16 @@ import jakarta.servlet.http.HttpServletResponse;
  * insuficiente). Se dispara desde el filtro de seguridad, por
  * lo tanto no pasa por el GlobalExceptionHandler y debe generar
  * el mismo formato de respuesta manualmente.
+ *
+ * Se usa un ObjectMapper propio (no inyectado) porque este
+ * handler corre fuera del ciclo normal de Spring MVC.
  */
 @Component
 public class CustomAccessDeniedHandler
         implements AccessDeniedHandler {
 
-    private final ObjectMapper objectMapper;
-
-    public CustomAccessDeniedHandler(
-            ObjectMapper objectMapper
-    ) {
-        this.objectMapper = objectMapper;
-    }
+    private static final ObjectMapper OBJECT_MAPPER =
+            new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Override
     public void handle(
@@ -59,7 +58,7 @@ public class CustomAccessDeniedHandler
 
         response.getWriter()
                 .write(
-                        objectMapper.writeValueAsString(body)
+                        OBJECT_MAPPER.writeValueAsString(body)
                 );
     }
 }

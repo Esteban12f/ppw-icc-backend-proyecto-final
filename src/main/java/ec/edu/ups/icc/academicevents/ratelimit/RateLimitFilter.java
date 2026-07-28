@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import ec.edu.ups.icc.academicevents.common.dtos.ErrorResponse;
 import jakarta.servlet.FilterChain;
@@ -27,15 +28,19 @@ import jakarta.servlet.http.HttpServletResponse;
  * "autenticado".
  *
  * Los endpoints de /auth/** tienen su propio límite verificado
- * directamente en AuthService (login y registro), por eso se
- * excluyen aquí para no aplicar la restricción dos veces.
+ * directamente en AuthService, por eso se excluyen aquí para no
+ * aplicar la restricción dos veces.
+ *
+ * Se usa un ObjectMapper propio (no inyectado) porque este filtro
+ * corre fuera del ciclo normal de serialización de Spring MVC.
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private final RateLimiterService rateLimiterService;
+    private static final ObjectMapper OBJECT_MAPPER =
+            new ObjectMapper().registerModule(new JavaTimeModule());
 
-    private final ObjectMapper objectMapper;
+    private final RateLimiterService rateLimiterService;
 
     private final int publicLimit;
 
@@ -51,7 +56,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     public RateLimitFilter(
             RateLimiterService rateLimiterService,
-            ObjectMapper objectMapper,
             @Value("${rate-limit.public.limit}")
             int publicLimit,
             @Value("${rate-limit.public.window-seconds}")
@@ -66,7 +70,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
             long reportsWindowSeconds
     ) {
         this.rateLimiterService = rateLimiterService;
-        this.objectMapper = objectMapper;
         this.publicLimit = publicLimit;
         this.publicWindowSeconds = publicWindowSeconds;
         this.authenticatedLimit = authenticatedLimit;
@@ -185,7 +188,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         );
 
         response.getWriter().write(
-                objectMapper.writeValueAsString(body)
+                OBJECT_MAPPER.writeValueAsString(body)
         );
     }
 }
