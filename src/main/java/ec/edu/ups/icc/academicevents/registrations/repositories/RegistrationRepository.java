@@ -15,6 +15,7 @@ public interface RegistrationRepository
         extends JpaRepository<RegistrationEntity, Long> {
 
     @EntityGraph(attributePaths = {"event", "participant"})
+    @Override
     Optional<RegistrationEntity> findById(Long id);
 
     @EntityGraph(attributePaths = {"event", "participant"})
