@@ -47,3 +47,25 @@ cors:
 
 app:
   timezone: America/Guayaquil
+
+rate-limit:
+  login:
+    limit: 5
+    window-seconds: 60
+  register:
+    limit: 3
+    window-seconds: 3600
+  public:
+    limit: 60
+    window-seconds: 60
+  authenticated:
+    limit: 120
+    window-seconds: 60
+  reports:
+    limit: 5
+    window-seconds: 60
+
+login-block:
+  max-attempts: 5
+  attempts-window-seconds: 900
+  block-duration-seconds: 900
