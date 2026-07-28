@@ -1,0 +1,49 @@
+services:
+  - type: web
+    name: academic-events-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+
+      - key: DB_URL
+        sync: false
+
+      - key: DB_USERNAME
+        sync: false
+
+      - key: DB_PASSWORD
+        sync: false
+
+      - key: REDIS_HOST
+        sync: false
+
+      - key: REDIS_PORT
+        sync: false
+
+      - key: REDIS_PASSWORD
+        sync: false
+
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: JWT_ACCESS_EXPIRATION
+        value: "1800000"
+
+      - key: JWT_REFRESH_EXPIRATION
+        value: "604800000"
+
+      - key: JWT_ISSUER
+        value: academic-events-api
+
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+      - key: ROOT_LOG_LEVEL
+        value: WARN
+
+      - key: APP_LOG_LEVEL
+        value: INFO
