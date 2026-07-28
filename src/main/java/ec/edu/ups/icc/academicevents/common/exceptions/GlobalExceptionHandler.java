@@ -19,6 +19,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.server.ResponseStatusException;
 
 import ec.edu.ups.icc.academicevents.common.dtos.ErrorResponse;
+import ec.edu.ups.icc.academicevents.ratelimit.RateLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -36,6 +37,37 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger =
             LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /**
+     * Captura los límites de solicitudes verificados
+     * directamente en un servicio (login, registro).
+     * Incluye el header Retry-After con los segundos
+     * que faltan para poder reintentar.
+     */
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceeded(
+            RateLimitExceededException exception,
+            HttpServletRequest request
+    ) {
+        ErrorResponse body = new ErrorResponse(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                "TOO_MANY_REQUESTS",
+                exception.getReason() != null
+                        ? exception.getReason()
+                        : "Demasiadas solicitudes",
+                request.getRequestURI()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(
+                        "Retry-After",
+                        String.valueOf(
+                                exception.getRetryAfterSeconds()
+                        )
+                )
+                .body(body);
+    }
 
     /**
      * Captura las excepciones lanzadas manualmente en los
