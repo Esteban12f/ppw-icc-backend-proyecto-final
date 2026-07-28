@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import ec.edu.ups.icc.academicevents.security.filters.JwtAuthenticationFilter;
 import ec.edu.ups.icc.academicevents.security.handlers.CustomAccessDeniedHandler;
@@ -91,12 +92,20 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             DaoAuthenticationProvider
-                    authenticationProvider
+                    authenticationProvider,
+            CorsConfigurationSource
+                    corsConfigurationSource
     ) throws Exception {
 
         http
                 .csrf(csrf ->
                         csrf.disable()
+                )
+
+                .cors(cors ->
+                        cors.configurationSource(
+                                corsConfigurationSource
+                        )
                 )
 
                 .sessionManagement(session ->
@@ -111,6 +120,17 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(authorize ->
                         authorize
+
+                                // Las peticiones preflight OPTIONS del
+                                // navegador nunca llevan el header
+                                // Authorization. Deben permitirse
+                                // explicitamente o el CORS real nunca
+                                // funciona desde un frontend en el navegador.
+                                .requestMatchers(
+                                        HttpMethod.OPTIONS,
+                                        "/**"
+                                )
+                                .permitAll()
 
                                 .requestMatchers(
                                         "/auth/register",
