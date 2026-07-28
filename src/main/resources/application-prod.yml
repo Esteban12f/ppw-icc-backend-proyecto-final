@@ -1,5 +1,5 @@
 server:
-  port: ${PORT}
+  port: ${PORT:8080}
 
 spring:
   datasource:
@@ -7,7 +7,15 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
 
+  jpa:
+    open-in-view: false
+    show-sql: false
+
+    hibernate:
+      ddl-auto: validate
   jpa:
     show-sql: false
 
