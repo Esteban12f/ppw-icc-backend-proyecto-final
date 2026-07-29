@@ -20,7 +20,7 @@ No hace falta clonar nada para probarlo, ya está corriendo en Render:
 - **Swagger UI:** https://academic-events-api-thyu.onrender.com/api/swagger-ui/index.html
 - **Health check:** https://academic-events-api-thyu.onrender.com/api/actuator/health
 
-Una aclaración importante para quien lo revise: si entran directo a la URL raíz (sin `/api`) les va a salir un **404**, y si entran a `/api` a secas les va a salir un **401**. Ninguno de los dos es un error nuestro ni significa que el despliegue falló — es que toda la API vive bajo el contexto `/api`, y no hay ningún endpoint público registrado justo en la raíz. Las rutas reales son cosas como `/api/events`, `/api/categories`, `/api/swagger-ui/index.html`, etc.
+Una aclaración importante: si entran directo a la URL raíz (sin `/api`) les va a salir un **404**, y si entran a `/api` a secas les va a salir un **401**. Ninguno de los dos es un error nuestro ni significa que el despliegue falló — es que toda la API vive bajo el contexto `/api`, y no hay ningún endpoint público registrado justo en la raíz. Las rutas reales son cosas como `/api/events`, `/api/categories`, `/api/swagger-ui/index.html`, etc.
 
 ### Credenciales para probar
 
@@ -35,4 +35,17 @@ Una aclaración importante para quien lo revise: si entran directo a la URL raí
 **Login como usuario normal** (rol `PARTICIPANT`):
 - Correo: `carlos.velez@academic.test`
 - Contraseña: `Password123*`
+
+## Cómo correrlo en local
+
+Si de todas formas quieren levantarlo en su máquina:
+
+```bash
+git clone https://github.com/Esteban12f/ppw-icc-backend-proyecto-final.git
+cd ppw-icc-backend-proyecto-final
+docker compose up -d
+./gradlew bootRun
+```
+
+Con eso deberían tener PostgreSQL en el puerto 5435 y Redis en el 6380 corriendo vía Docker, y la API en `http://localhost:8080/api`. El perfil `dev` usa Flyway para crear el esquema automáticamente, así que no hay que correr ningún script a mano en local.
 
