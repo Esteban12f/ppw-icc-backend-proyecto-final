@@ -20,6 +20,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import ec.edu.ups.icc.academicevents.auth.dtos.CurrentUserResponse;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+
+import java.util.List;
+
 import ec.edu.ups.icc.academicevents.auth.dtos.AuthResponse;
 import ec.edu.ups.icc.academicevents.auth.dtos.LoginRequest;
 import ec.edu.ups.icc.academicevents.auth.dtos.RefreshRequest;
@@ -39,383 +46,370 @@ import ec.edu.ups.icc.academicevents.users.repositories.UserRepository;
 @Service
 public class AuthService {
 
-    private static final SecureRandom SECURE_RANDOM =
-            new SecureRandom();
+        private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    private static final Base64.Encoder TOKEN_ENCODER =
-            Base64.getUrlEncoder().withoutPadding();
+        private static final Base64.Encoder TOKEN_ENCODER = Base64.getUrlEncoder().withoutPadding();
 
-    private final UserRepository userRepository;
+        private final UserRepository userRepository;
 
-    private final RoleRepository roleRepository;
+        private final RoleRepository roleRepository;
 
-    private final RefreshTokenRepository refreshTokenRepository;
+        private final RefreshTokenRepository refreshTokenRepository;
 
-    private final PasswordEncoder passwordEncoder;
+        private final PasswordEncoder passwordEncoder;
 
-    private final AuthenticationManager authenticationManager;
+        private final AuthenticationManager authenticationManager;
 
-    private final JwtService jwtService;
+        private final JwtService jwtService;
 
-    private final RateLimiterService rateLimiterService;
+        private final RateLimiterService rateLimiterService;
 
-    private final LoginAttemptService loginAttemptService;
+        private final LoginAttemptService loginAttemptService;
 
-    private final long accessExpiration;
+        private final long accessExpiration;
 
-    private final long refreshExpiration;
+        private final long refreshExpiration;
 
-    private final int loginLimit;
+        private final int loginLimit;
 
-    private final long loginWindowSeconds;
+        private final long loginWindowSeconds;
 
-    private final int registerLimit;
+        private final int registerLimit;
 
-    private final long registerWindowSeconds;
+        private final long registerWindowSeconds;
 
-    public AuthService(
-            UserRepository userRepository,
-            RoleRepository roleRepository,
-            RefreshTokenRepository refreshTokenRepository,
-            PasswordEncoder passwordEncoder,
-            AuthenticationManager authenticationManager,
-            JwtService jwtService,
-            RateLimiterService rateLimiterService,
-            LoginAttemptService loginAttemptService,
-            @Value("${jwt.access-expiration}")
-            long accessExpiration,
-            @Value("${jwt.refresh-expiration}")
-            long refreshExpiration,
-            @Value("${rate-limit.login.limit}")
-            int loginLimit,
-            @Value("${rate-limit.login.window-seconds}")
-            long loginWindowSeconds,
-            @Value("${rate-limit.register.limit}")
-            int registerLimit,
-            @Value("${rate-limit.register.window-seconds}")
-            long registerWindowSeconds
-    ) {
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.refreshTokenRepository = refreshTokenRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
-        this.rateLimiterService = rateLimiterService;
-        this.loginAttemptService = loginAttemptService;
-        this.accessExpiration = accessExpiration;
-        this.refreshExpiration = refreshExpiration;
-        this.loginLimit = loginLimit;
-        this.loginWindowSeconds = loginWindowSeconds;
-        this.registerLimit = registerLimit;
-        this.registerWindowSeconds = registerWindowSeconds;
-    }
-
-    @Transactional
-    public void register(
-            RegisterRequest request,
-            String clientIp
-    ) {
-        enforceRateLimit(
-                "rl:register:ip:" + clientIp,
-                registerLimit,
-                registerWindowSeconds,
-                "Ha superado el límite de registros. "
-                        + "Intente nuevamente más tarde."
-        );
-
-        if (userRepository.existsByEmailIgnoreCase(
-                request.getEmail())) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "El correo ya está registrado"
-            );
+        public AuthService(
+                        UserRepository userRepository,
+                        RoleRepository roleRepository,
+                        RefreshTokenRepository refreshTokenRepository,
+                        PasswordEncoder passwordEncoder,
+                        AuthenticationManager authenticationManager,
+                        JwtService jwtService,
+                        RateLimiterService rateLimiterService,
+                        LoginAttemptService loginAttemptService,
+                        @Value("${jwt.access-expiration}") long accessExpiration,
+                        @Value("${jwt.refresh-expiration}") long refreshExpiration,
+                        @Value("${rate-limit.login.limit}") int loginLimit,
+                        @Value("${rate-limit.login.window-seconds}") long loginWindowSeconds,
+                        @Value("${rate-limit.register.limit}") int registerLimit,
+                        @Value("${rate-limit.register.window-seconds}") long registerWindowSeconds) {
+                this.userRepository = userRepository;
+                this.roleRepository = roleRepository;
+                this.refreshTokenRepository = refreshTokenRepository;
+                this.passwordEncoder = passwordEncoder;
+                this.authenticationManager = authenticationManager;
+                this.jwtService = jwtService;
+                this.rateLimiterService = rateLimiterService;
+                this.loginAttemptService = loginAttemptService;
+                this.accessExpiration = accessExpiration;
+                this.refreshExpiration = refreshExpiration;
+                this.loginLimit = loginLimit;
+                this.loginWindowSeconds = loginWindowSeconds;
+                this.registerLimit = registerLimit;
+                this.registerWindowSeconds = registerWindowSeconds;
         }
 
-        UserEntity user = new UserEntity(
-                request.getFirstName(),
-                request.getLastName(),
-                request.getEmail(),
-                passwordEncoder.encode(request.getPassword())
-        );
+        @Transactional
+        public void register(
+                        RegisterRequest request,
+                        String clientIp) {
+                enforceRateLimit(
+                                "rl:register:ip:" + clientIp,
+                                registerLimit,
+                                registerWindowSeconds,
+                                "Ha superado el límite de registros. "
+                                                + "Intente nuevamente más tarde.");
 
-        RoleEntity participant = roleRepository
-                .findByName(RoleName.PARTICIPANT)
-                .orElseThrow(() ->
-                        new IllegalStateException(
-                                "No existe el rol PARTICIPANT"
-                        )
-                );
+                if (userRepository.existsByEmailIgnoreCase(
+                                request.getEmail())) {
 
-        user.addRole(participant);
+                        throw new ResponseStatusException(
+                                        HttpStatus.CONFLICT,
+                                        "El correo ya está registrado");
+                }
 
-        userRepository.save(user);
-    }
+                UserEntity user = new UserEntity(
+                                request.getFirstName(),
+                                request.getLastName(),
+                                request.getEmail(),
+                                passwordEncoder.encode(request.getPassword()));
 
-    @Transactional
-    public AuthResponse login(
-            LoginRequest request,
-            String clientIp
-    ) {
-        String email = request.getEmail();
+                RoleEntity participant = roleRepository
+                                .findByName(RoleName.PARTICIPANT)
+                                .orElseThrow(() -> new IllegalStateException(
+                                                "No existe el rol PARTICIPANT"));
 
-        if (loginAttemptService.isBlocked(email)) {
+                user.addRole(participant);
 
-            throw new RateLimitExceededException(
-                    "Cuenta bloqueada temporalmente por "
-                            + "múltiples intentos fallidos",
-                    loginAttemptService
-                            .getBlockRemainingSeconds(email)
-            );
+                userRepository.save(user);
         }
 
-        enforceRateLimit(
-                "rl:login:ip:" + clientIp,
-                loginLimit,
-                loginWindowSeconds,
-                "Ha superado el límite de intentos de "
-                        + "inicio de sesión. Intente "
-                        + "nuevamente más tarde."
-        );
+        @Transactional
+        public AuthResponse login(
+                        LoginRequest request,
+                        String clientIp) {
+                String email = request.getEmail();
 
-        enforceRateLimit(
-                "rl:login:email:" + normalize(email),
-                loginLimit,
-                loginWindowSeconds,
-                "Ha superado el límite de intentos de "
-                        + "inicio de sesión. Intente "
-                        + "nuevamente más tarde."
-        );
+                if (loginAttemptService.isBlocked(email)) {
 
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            email,
-                            request.getPassword()
-                    )
-            );
+                        throw new RateLimitExceededException(
+                                        "Cuenta bloqueada temporalmente por "
+                                                        + "múltiples intentos fallidos",
+                                        loginAttemptService
+                                                        .getBlockRemainingSeconds(email));
+                }
 
-        } catch (AuthenticationException exception) {
+                enforceRateLimit(
+                                "rl:login:ip:" + clientIp,
+                                loginLimit,
+                                loginWindowSeconds,
+                                "Ha superado el límite de intentos de "
+                                                + "inicio de sesión. Intente "
+                                                + "nuevamente más tarde.");
 
-            loginAttemptService
-                    .registerFailedAttempt(email);
+                enforceRateLimit(
+                                "rl:login:email:" + normalize(email),
+                                loginLimit,
+                                loginWindowSeconds,
+                                "Ha superado el límite de intentos de "
+                                                + "inicio de sesión. Intente "
+                                                + "nuevamente más tarde.");
 
-            throw invalidCredentials();
+                try {
+                        authenticationManager.authenticate(
+                                        new UsernamePasswordAuthenticationToken(
+                                                        email,
+                                                        request.getPassword()));
+
+                } catch (AuthenticationException exception) {
+
+                        loginAttemptService
+                                        .registerFailedAttempt(email);
+
+                        throw invalidCredentials();
+                }
+
+                UserEntity user = userRepository
+                                .findByEmailIgnoreCase(email)
+                                .orElseThrow(this::invalidCredentials);
+
+                loginAttemptService.clearAttempts(email);
+
+                String accessToken = jwtService.generateToken(
+                                user.getEmail());
+
+                IssuedRefreshToken refreshToken = issueRefreshToken(user, clientIp);
+
+                return new AuthResponse(
+                                accessToken,
+                                refreshToken.rawToken(),
+                                accessExpiration);
         }
 
-        UserEntity user = userRepository
-                .findByEmailIgnoreCase(email)
-                .orElseThrow(this::invalidCredentials);
+        @Transactional
+        public AuthResponse refresh(
+                        RefreshRequest request,
+                        String clientIp) {
+                String currentTokenHash = hashToken(
+                                request.getRefreshToken());
 
-        loginAttemptService.clearAttempts(email);
+                RefreshTokenEntity currentToken = refreshTokenRepository
+                                .findByTokenHash(currentTokenHash)
+                                .orElseThrow(this::invalidRefreshToken);
 
-        String accessToken = jwtService.generateToken(
-                user.getEmail()
-        );
+                if (!currentToken.isValid()) {
+                        throw invalidRefreshToken();
+                }
 
-        IssuedRefreshToken refreshToken =
-                issueRefreshToken(user, clientIp);
+                UserEntity user = currentToken.getUser();
 
-        return new AuthResponse(
-                accessToken,
-                refreshToken.rawToken(),
-                accessExpiration
-        );
-    }
+                /*
+                 * Primero se emite el nuevo refresh token.
+                 * Toda la operación está dentro de una transacción.
+                 */
+                IssuedRefreshToken replacement = issueRefreshToken(user, clientIp);
 
-    @Transactional
-    public AuthResponse refresh(
-            RefreshRequest request,
-            String clientIp
-    ) {
-        String currentTokenHash = hashToken(
-                request.getRefreshToken()
-        );
+                /*
+                 * El token anterior se revoca y se relaciona
+                 * con el token que lo sustituyó.
+                 */
+                currentToken.revoke();
 
-        RefreshTokenEntity currentToken =
+                currentToken.setReplacedByTokenId(
+                                replacement.tokenId());
+
+                refreshTokenRepository.save(currentToken);
+
+                String newAccessToken = jwtService.generateToken(
+                                user.getEmail());
+
+                return new AuthResponse(
+                                newAccessToken,
+                                replacement.rawToken(),
+                                accessExpiration);
+        }
+
+        @Transactional
+        public void logout(RefreshRequest request) {
+
+                String tokenHash = hashToken(
+                                request.getRefreshToken());
+
                 refreshTokenRepository
-                        .findByTokenHash(currentTokenHash)
-                        .orElseThrow(this::invalidRefreshToken);
+                                .findByTokenHash(tokenHash)
+                                .ifPresent(token -> {
 
-        if (!currentToken.isValid()) {
-            throw invalidRefreshToken();
+                                        if (!token.isRevoked()) {
+                                                token.revoke();
+                                                refreshTokenRepository.save(token);
+                                        }
+                                });
         }
 
-        UserEntity user = currentToken.getUser();
+        private void enforceRateLimit(
+                        String key,
+                        int limit,
+                        long windowSeconds,
+                        String message) {
+                RateLimiterService.RateLimitResult result = rateLimiterService.tryConsume(
+                                key,
+                                limit,
+                                windowSeconds);
 
-        /*
-         * Primero se emite el nuevo refresh token.
-         * Toda la operación está dentro de una transacción.
-         */
-        IssuedRefreshToken replacement =
-                issueRefreshToken(user, clientIp);
+                if (!result.isAllowed()) {
 
-        /*
-         * El token anterior se revoca y se relaciona
-         * con el token que lo sustituyó.
-         */
-        currentToken.revoke();
-
-        currentToken.setReplacedByTokenId(
-                replacement.tokenId()
-        );
-
-        refreshTokenRepository.save(currentToken);
-
-        String newAccessToken = jwtService.generateToken(
-                user.getEmail()
-        );
-
-        return new AuthResponse(
-                newAccessToken,
-                replacement.rawToken(),
-                accessExpiration
-        );
-    }
-
-    @Transactional
-    public void logout(RefreshRequest request) {
-
-        String tokenHash = hashToken(
-                request.getRefreshToken()
-        );
-
-        refreshTokenRepository
-                .findByTokenHash(tokenHash)
-                .ifPresent(token -> {
-
-                    if (!token.isRevoked()) {
-                        token.revoke();
-                        refreshTokenRepository.save(token);
-                    }
-                });
-    }
-
-    private void enforceRateLimit(
-            String key,
-            int limit,
-            long windowSeconds,
-            String message
-    ) {
-        RateLimiterService.RateLimitResult result =
-                rateLimiterService.tryConsume(
-                        key,
-                        limit,
-                        windowSeconds
-                );
-
-        if (!result.isAllowed()) {
-
-            throw new RateLimitExceededException(
-                    message,
-                    result.getRetryAfterSeconds()
-            );
-        }
-    }
-
-    private String normalize(String email) {
-        return email == null
-                ? ""
-                : email.trim().toLowerCase();
-    }
-
-    private IssuedRefreshToken issueRefreshToken(
-            UserEntity user,
-            String clientIp
-    ) {
-        String rawToken;
-        String tokenHash;
-
-        /*
-         * Se evita una colisión extremadamente improbable.
-         */
-        do {
-            rawToken = generateRawRefreshToken();
-            tokenHash = hashToken(rawToken);
-        } while (
-                refreshTokenRepository
-                        .existsByTokenHash(tokenHash)
-        );
-
-        UUID tokenId = UUID.randomUUID();
-
-        RefreshTokenEntity entity =
-                new RefreshTokenEntity();
-
-        entity.setTokenId(tokenId);
-        entity.setUser(user);
-        entity.setTokenHash(tokenHash);
-
-        entity.setExpiresAt(
-                OffsetDateTime.now().plus(
-                        Duration.ofMillis(refreshExpiration)
-                )
-        );
-
-        if (clientIp != null && !clientIp.isBlank()) {
-            entity.setCreatedByIp(clientIp);
+                        throw new RateLimitExceededException(
+                                        message,
+                                        result.getRetryAfterSeconds());
+                }
         }
 
-        refreshTokenRepository.save(entity);
-
-        return new IssuedRefreshToken(
-                rawToken,
-                tokenId
-        );
-    }
-
-    private String generateRawRefreshToken() {
-
-        byte[] randomBytes = new byte[48];
-
-        SECURE_RANDOM.nextBytes(randomBytes);
-
-        return TOKEN_ENCODER.encodeToString(
-                randomBytes
-        );
-    }
-
-    private String hashToken(String rawToken) {
-
-        try {
-            MessageDigest digest =
-                    MessageDigest.getInstance("SHA-256");
-
-            byte[] hash = digest.digest(
-                    rawToken.getBytes(
-                            StandardCharsets.UTF_8
-                    )
-            );
-
-            return HexFormat.of().formatHex(hash);
-
-        } catch (NoSuchAlgorithmException exception) {
-
-            throw new IllegalStateException(
-                    "SHA-256 no está disponible",
-                    exception
-            );
+        private String normalize(String email) {
+                return email == null
+                                ? ""
+                                : email.trim().toLowerCase();
         }
-    }
 
-    private ResponseStatusException invalidCredentials() {
-        return new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED,
-                "Credenciales inválidas"
-        );
-    }
+        private IssuedRefreshToken issueRefreshToken(
+                        UserEntity user,
+                        String clientIp) {
+                String rawToken;
+                String tokenHash;
 
-    private ResponseStatusException invalidRefreshToken() {
-        return new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED,
-                "Refresh token inválido, expirado o revocado"
-        );
-    }
+                /*
+                 * Se evita una colisión extremadamente improbable.
+                 */
+                do {
+                        rawToken = generateRawRefreshToken();
+                        tokenHash = hashToken(rawToken);
+                } while (refreshTokenRepository
+                                .existsByTokenHash(tokenHash));
 
-    private record IssuedRefreshToken(
-            String rawToken,
-            UUID tokenId
-    ) {
-    }
+                UUID tokenId = UUID.randomUUID();
+
+                RefreshTokenEntity entity = new RefreshTokenEntity();
+
+                entity.setTokenId(tokenId);
+                entity.setUser(user);
+                entity.setTokenHash(tokenHash);
+
+                entity.setExpiresAt(
+                                OffsetDateTime.now().plus(
+                                                Duration.ofMillis(refreshExpiration)));
+
+                if (clientIp != null && !clientIp.isBlank()) {
+                        entity.setCreatedByIp(clientIp);
+                }
+
+                refreshTokenRepository.save(entity);
+
+                return new IssuedRefreshToken(
+                                rawToken,
+                                tokenId);
+        }
+
+        private String generateRawRefreshToken() {
+
+                byte[] randomBytes = new byte[48];
+
+                SECURE_RANDOM.nextBytes(randomBytes);
+
+                return TOKEN_ENCODER.encodeToString(
+                                randomBytes);
+        }
+
+        private String hashToken(String rawToken) {
+
+                try {
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+                        byte[] hash = digest.digest(
+                                        rawToken.getBytes(
+                                                        StandardCharsets.UTF_8));
+
+                        return HexFormat.of().formatHex(hash);
+
+                } catch (NoSuchAlgorithmException exception) {
+
+                        throw new IllegalStateException(
+                                        "SHA-256 no está disponible",
+                                        exception);
+                }
+        }
+
+        private ResponseStatusException invalidCredentials() {
+                return new ResponseStatusException(
+                                HttpStatus.UNAUTHORIZED,
+                                "Credenciales inválidas");
+        }
+
+        private ResponseStatusException invalidRefreshToken() {
+                return new ResponseStatusException(
+                                HttpStatus.UNAUTHORIZED,
+                                "Refresh token inválido, expirado o revocado");
+        }
+
+        private record IssuedRefreshToken(
+                        String rawToken,
+                        UUID tokenId) {
+        }
+
+        @Transactional(readOnly = true)
+        public CurrentUserResponse me(
+                        Authentication authentication) {
+                if (authentication == null
+                                || !authentication.isAuthenticated()) {
+
+                        throw new ResponseStatusException(
+                                        HttpStatus.UNAUTHORIZED,
+                                        "Usuario no autenticado");
+                }
+
+                UserEntity user = userRepository
+                                .findByEmailIgnoreCase(
+                                                authentication.getName())
+                                .orElseThrow(() -> new ResponseStatusException(
+                                                HttpStatus.UNAUTHORIZED,
+                                                "El usuario autenticado no existe"));
+
+                List<String> roles = authentication
+                                .getAuthorities()
+                                .stream()
+                                .map(GrantedAuthority::getAuthority)
+                                .map(authority -> authority.startsWith("ROLE_")
+                                                ? authority.substring(5)
+                                                : authority)
+                                .distinct()
+                                .sorted()
+                                .toList();
+
+                return new CurrentUserResponse(
+                                user.getId(),
+                                user.getFirstName(),
+                                user.getLastName(),
+                                user.getFullName(),
+                                user.getEmail(),
+                                user.getStatus(),
+                                roles);
+        }
 }
