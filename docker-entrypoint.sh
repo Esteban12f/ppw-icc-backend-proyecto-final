@@ -7,21 +7,31 @@ if [ -z "${DB_URL:-}" ]; then
     exit 1
 fi
 
-# Render entrega postgresql://...
-# JDBC necesita jdbc:postgresql://...
 case "$DB_URL" in
     jdbc:postgresql://*)
+        # Ya tiene formato JDBC correcto.
         ;;
-    postgresql://*)
-        export DB_URL="jdbc:${DB_URL}"
+
+    postgresql://*|postgres://*)
+        # Render entrega:
+        # postgresql://usuario:password@host:puerto/base
+        #
+        # PostgreSQL JDBC necesita:
+        # jdbc:postgresql://host:puerto/base
+        #
+        # DB_USERNAME y DB_PASSWORD ya se proporcionan por separado.
+        URL_WITHOUT_SCHEME="${DB_URL#*://}"
+        HOST_PORT_DATABASE="${URL_WITHOUT_SCHEME#*@}"
+
+        export DB_URL="jdbc:postgresql://${HOST_PORT_DATABASE}"
         ;;
-    postgres://*)
-        export DB_URL="jdbc:postgresql://${DB_URL#postgres://}"
-        ;;
+
     *)
         echo "ERROR: DB_URL no tiene un formato PostgreSQL válido." >&2
         exit 1
         ;;
 esac
+
+echo "URL de PostgreSQL convertida correctamente al formato JDBC."
 
 exec java -jar /app/app.jar
