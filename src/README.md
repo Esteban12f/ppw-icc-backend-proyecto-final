@@ -87,4 +87,25 @@ Reglas que se validan:
 
 Esta parte es de Alex. Permite que un participante se inscriba a un evento, consulte sus propias inscripciones, las cancele, y que el organizador confirme o rechace inscripciones de sus eventos.
 
+## Cómo desplegamos esto
+
+Terminamos usando Render con un Blueprint (`render.yaml`), que nos levanta tres cosas juntas: el web service con Docker, una base PostgreSQL administrada y un Redis (bueno, técnicamente es el "Key Value" de Render, pero es compatible con clientes Redis normales).
+
+El Dockerfile es multietapa: una etapa compila el proyecto con Gradle sobre una imagen JDK, y la etapa final solo copia el jar ya compilado sobre una imagen JRE más liviana, corriendo con un usuario sin privilegios de administrador.
+
+Nos encontramos con varios problemas en el camino que vale la pena dejar anotados por si alguien más se topa con lo mismo:
+
+**El contenedor no arrancaba (`exec format error`).** Resulta que el script `docker-entrypoint.sh` se había guardado con saltos de línea de Windows (CRLF) en vez de Linux (LF), y Linux no lo podía ejecutar. Se arregló guardándolo en UTF-8 sin BOM con saltos LF, y agregando un `.gitattributes` para que Git no lo vuelva a convertir mal.
+
+**El driver de PostgreSQL rechazaba la URL de conexión.** Render entrega la URL de la base como `postgresql://usuario:contraseña@host/base`, pero el driver JDBC necesita el formato `jdbc:postgresql://host/base`, sin las credenciales metidas ahí. Tocó agregar lógica al entrypoint para transformar esa URL antes de arrancar la aplicación, y pasar usuario/contraseña por variables de entorno separadas.
+
+**Swagger no pedía usuario y contraseña aunque las variables ya estaban puestas en Render.** Nos dimos cuenta de que tener las variables `SWAGGER_USERNAME`/`SWAGGER_PASSWORD` configuradas no activa ninguna seguridad por sí solo — hay que tener una configuración de Spring Security que las use de verdad (autenticación básica) solo cuando el perfil activo es `prod`.
+
+**Render no se actualizaba después de un push.** Esto pasó porque el Blueprint estaba apuntando a la rama `deploy/render`, y nosotros estábamos empujando los cambios a otra rama. Una vez hicimos merge a `deploy/render` y le dimos push ahí, Render desplegó solo automáticamente.
+
+La estructura de la base de datos la sigue manejando Flyway con `ddl-auto: validate` (nunca `update`), y la migración inicial ya aplicada no se debe tocar — cualquier cambio nuevo va en una migración V2, V3, etc.
+
+## Pruebas
+
+Cada módulo tiene sus propias pruebas unitarias con JUnit y Mockito, y en el caso de sessions también hay pruebas de integración con MockMvc que verifican los códigos de respuesta HTTP reales y la validación de los datos de entrada.
 
