@@ -1,5 +1,7 @@
+# syntax=docker/dockerfile:1.7
+
 # ============================================
-# ETAPA 1: BUILD
+# ETAPA 1: COMPILACIÓN
 # ============================================
 FROM eclipse-temurin:21-jdk-alpine AS builder
 
@@ -14,34 +16,35 @@ RUN chmod +x gradlew
 COPY src ./src
 
 RUN --mount=type=cache,target=/root/.gradle \
-    ./gradlew bootJar -x test --no-daemon
-
-RUN mkdir -p build/dependency \
-    && cd build/dependency \
-    && jar -xf ../libs/app.jar
+    ./gradlew clean bootJar -x test --no-daemon \
+    && JAR_FILE="$(find build/libs -maxdepth 1 -type f \
+        -name '*.jar' ! -name '*-plain.jar' | head -n 1)" \
+    && test -n "$JAR_FILE" \
+    && cp "$JAR_FILE" /workspace/app.jar
 
 
 # ============================================
-# ETAPA 2: RUNTIME
+# ETAPA 2: EJECUCIÓN
 # ============================================
 FROM eclipse-temurin:21-jre-alpine AS runtime
 
 WORKDIR /app
 
-RUN apk add --no-cache curl \
+RUN apk add --no-cache curl tzdata \
     && addgroup -S spring \
     && adduser -S spring -G spring
 
-ARG DEPENDENCY=/workspace/app/build/dependency
+COPY --from=builder \
+    --chown=spring:spring \
+    /workspace/app.jar \
+    /app/app.jar
 
-COPY --from=builder --chown=spring:spring \
-    ${DEPENDENCY}/BOOT-INF/lib /app/lib
+COPY --chown=spring:spring \
+    docker-entrypoint.sh \
+    /app/docker-entrypoint.sh
 
-COPY --from=builder --chown=spring:spring \
-    ${DEPENDENCY}/META-INF /app/META-INF
-
-COPY --from=builder --chown=spring:spring \
-    ${DEPENDENCY}/BOOT-INF/classes /app
+RUN sed -i 's/\r$//' /app/docker-entrypoint.sh \
+    && chmod +x /app/docker-entrypoint.sh
 
 USER spring:spring
 
@@ -49,15 +52,13 @@ EXPOSE 8080
 
 ENV TZ=America/Guayaquil
 
-HEALTHCHECK --interval=30s \
+HEALTHCHECK \
+    --interval=30s \
     --timeout=5s \
     --start-period=60s \
     --retries=3 \
     CMD curl --fail --silent --show-error \
-    http://localhost:8080/api/actuator/health || exit 1
+    "http://localhost:${PORT:-8080}/api/actuator/health" \
+    || exit 1
 
-ENTRYPOINT ["java", \
-    "-XX:MaxRAMPercentage=75.0", \
-    "-cp", \
-    "/app:/app/lib/*", \
-    "ec.edu.ups.icc.academicevents.AcademicEventsApiApplication"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
