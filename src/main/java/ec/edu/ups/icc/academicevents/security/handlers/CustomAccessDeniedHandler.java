@@ -1,57 +1,64 @@
 package ec.edu.ups.icc.academicevents.security.handlers;
 
+import java.io.IOException;
 
-import jakarta.servlet.ServletException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import ec.edu.ups.icc.academicevents.common.dtos.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-
-import org.springframework.security.access.AccessDeniedException;
-
-import org.springframework.security.web.access.AccessDeniedHandler;
-
-import org.springframework.stereotype.Component;
-
-
-import java.io.IOException;
-
-
-
+/**
+ * Se ejecuta cuando un usuario autenticado intenta acceder a
+ * un recurso para el cual no tiene autorización (rol
+ * insuficiente). Se dispara desde el filtro de seguridad, por
+ * lo tanto no pasa por el GlobalExceptionHandler y debe generar
+ * el mismo formato de respuesta manualmente.
+ *
+ * Se usa un ObjectMapper propio (no inyectado) porque este
+ * handler corre fuera del ciclo normal de Spring MVC.
+ */
 @Component
-public class CustomAccessDeniedHandler 
+public class CustomAccessDeniedHandler
         implements AccessDeniedHandler {
 
+    private static final ObjectMapper OBJECT_MAPPER =
+            new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Override
     public void handle(
-
             HttpServletRequest request,
-
             HttpServletResponse response,
-
             AccessDeniedException accessDeniedException
-
-    )
-            throws IOException {
-
+    ) throws IOException {
 
         response.setStatus(
                 HttpServletResponse.SC_FORBIDDEN
         );
 
-
         response.setContentType(
-                "application/json"
+                MediaType.APPLICATION_JSON_VALUE
         );
 
+        response.setCharacterEncoding("UTF-8");
+
+        ErrorResponse body = new ErrorResponse(
+                HttpStatus.FORBIDDEN.value(),
+                "FORBIDDEN",
+                "No tiene permisos para acceder a este recurso",
+                request.getRequestURI()
+        );
 
         response.getWriter()
-                .write("""
-                {
-                  "status":403,
-                  "message":"Access denied"
-                }
-                """);
-
+                .write(
+                        OBJECT_MAPPER.writeValueAsString(body)
+                );
     }
 }

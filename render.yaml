@@ -1,0 +1,110 @@
+services:
+  # ==========================================
+  # API SPRING BOOT
+  # ==========================================
+  - type: web
+    name: academic-events-api
+    runtime: docker
+    plan: free
+    region: oregon
+
+    branch: deploy/render
+    autoDeployTrigger: commit
+
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+
+    healthCheckPath: /api/actuator/health
+
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+
+      - key: PORT
+        value: "10000"
+
+      # PostgreSQL administrado por Render
+      - key: DB_URL
+        fromDatabase:
+          name: academic-events-db
+          property: connectionString
+
+      - key: DB_USERNAME
+        fromDatabase:
+          name: academic-events-db
+          property: user
+
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: academic-events-db
+          property: password
+
+      # Redis/Valkey administrado por Render
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: academic-events-redis
+          property: connectionString
+
+      # JWT
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: JWT_ACCESS_EXPIRATION
+        value: "1800000"
+
+      - key: JWT_REFRESH_EXPIRATION
+        value: "604800000"
+
+      - key: JWT_ISSUER
+        value: academic-events-api
+
+      # CORS
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+      # Protección de Swagger en producción
+      - key: SWAGGER_USERNAME
+        sync: false
+
+      - key: SWAGGER_PASSWORD
+        sync: false
+
+      # Logs
+      - key: ROOT_LOG_LEVEL
+        value: WARN
+
+      - key: APP_LOG_LEVEL
+        value: INFO
+
+      # Límite de memoria y zona horaria
+      - key: JAVA_TOOL_OPTIONS
+        value: >-
+          -XX:MaxRAMPercentage=70.0
+          -Duser.timezone=America/Guayaquil
+
+  # ==========================================
+  # REDIS / VALKEY
+  # ==========================================
+  - type: keyvalue
+    name: academic-events-redis
+    plan: free
+    region: oregon
+
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+    persistenceMode: off
+
+# ============================================
+# POSTGRESQL
+# ============================================
+databases:
+  - name: academic-events-db
+    plan: free
+    region: oregon
+
+    databaseName: academic_events_db
+    user: ups
+    postgresMajorVersion: "17"
+
+    ipAllowList: []

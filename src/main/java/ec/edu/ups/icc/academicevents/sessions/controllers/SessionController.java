@@ -1,19 +1,9 @@
 package ec.edu.ups.icc.academicevents.sessions.controllers;
 
-import ec.edu.ups.icc.academicevents.sessions.dtos.SessionRequest;
-import ec.edu.ups.icc.academicevents.sessions.dtos.SessionResponse;
-import ec.edu.ups.icc.academicevents.sessions.services.SessionService;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
-
-import jakarta.validation.Valid;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,7 +15,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import ec.edu.ups.icc.academicevents.sessions.dtos.SessionRequest;
+import ec.edu.ups.icc.academicevents.sessions.dtos.SessionResponse;
+import ec.edu.ups.icc.academicevents.sessions.services.SessionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/sessions")
@@ -55,8 +55,14 @@ public class SessionController {
             )
     })
     @GetMapping("/upcoming")
-    public ResponseEntity<List<SessionResponse>> findUpcoming() {
-        return ResponseEntity.ok(sessionService.findUpcoming());
+    public ResponseEntity<Page<SessionResponse>> findUpcoming(
+            @PageableDefault(
+                    size = 10,
+                    sort = "startAt",
+                    direction = Sort.Direction.ASC
+            ) Pageable pageable
+    ) {
+        return ResponseEntity.ok(sessionService.findUpcoming(pageable));
     }
 
     @Operation(
@@ -109,7 +115,9 @@ public class SessionController {
             @Valid @RequestBody SessionRequest request,
             Authentication authentication
     ) {
-        return ResponseEntity.ok(sessionService.update(id, request, authentication));
+        return ResponseEntity.ok(
+                sessionService.update(id, request, authentication)
+        );
     }
 
     @Operation(

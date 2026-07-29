@@ -1,14 +1,26 @@
 server:
-  port: ${PORT}
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  shutdown: graceful
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      validation-timeout: 5000
+
   jpa:
+    open-in-view: false
     show-sql: false
 
     hibernate:
@@ -26,10 +38,20 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD:}
+      url: "${REDIS_URL:redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}}"
+      password: "${REDIS_PASSWORD:}"
       timeout: 2000ms
+      connect-timeout: 2000ms
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+  endpoint:
+    health:
+      show-details: never
 
 logging:
   level:
@@ -40,10 +62,40 @@ jwt:
   secret: ${JWT_SECRET}
   access-expiration: ${JWT_ACCESS_EXPIRATION}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION}
-  issuer: ${JWT_ISSUER}
+  issuer: ${JWT_ISSUER:academic-events-api}
 
 cors:
   allowed-origins: ${ALLOWED_ORIGINS}
 
 app:
   timezone: America/Guayaquil
+
+rate-limit:
+  login:
+    limit: 5
+    window-seconds: 60
+
+  register:
+    limit: 3
+    window-seconds: 3600
+
+  public:
+    limit: 60
+    window-seconds: 60
+
+  authenticated:
+    limit: 120
+    window-seconds: 60
+
+  reports:
+    limit: 5
+    window-seconds: 60
+
+login-block:
+  max-attempts: 5
+  attempts-window-seconds: 900
+  block-duration-seconds: 900
+
+swagger:
+  username: ${SWAGGER_USERNAME}
+  password: ${SWAGGER_PASSWORD}

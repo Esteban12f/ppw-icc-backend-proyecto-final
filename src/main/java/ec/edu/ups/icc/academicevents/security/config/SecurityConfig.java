@@ -1,5 +1,6 @@
 package ec.edu.ups.icc.academicevents.security.config;
 
+import ec.edu.ups.icc.academicevents.ratelimit.RateLimitFilter;
 import ec.edu.ups.icc.academicevents.security.filters.JwtAuthenticationFilter;
 import ec.edu.ups.icc.academicevents.security.handlers.CustomAccessDeniedHandler;
 import ec.edu.ups.icc.academicevents.security.handlers.CustomAuthenticationEntryPoint;
@@ -18,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
 @EnableMethodSecurity
@@ -91,12 +93,21 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             DaoAuthenticationProvider
-                    authenticationProvider
+                    authenticationProvider,
+            CorsConfigurationSource
+                    corsConfigurationSource,
+            RateLimitFilter rateLimitFilter
     ) throws Exception {
 
         http
                 .csrf(csrf ->
                         csrf.disable()
+                )
+
+                .cors(cors ->
+                        cors.configurationSource(
+                                corsConfigurationSource
+                        )
                 )
 
                 .sessionManagement(session ->
@@ -113,6 +124,12 @@ public class SecurityConfig {
                         authorize
 
                                 .requestMatchers(
+                                        HttpMethod.OPTIONS,
+                                        "/**"
+                                )
+                                .permitAll()
+
+                                .requestMatchers(
                                         "/auth/register",
                                         "/auth/login",
                                         "/auth/refresh",
@@ -124,6 +141,26 @@ public class SecurityConfig {
                                         "/error"
                                 )
                                 .permitAll()
+
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/events/*/registrations"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN",
+                                        "ORGANIZER",
+                                        "ROLE_ADMIN",
+                                        "ROLE_ORGANIZER"
+                                )
+
+                                .requestMatchers(
+                                        HttpMethod.POST,
+                                        "/events/*/registrations"
+                                )
+                                .hasAnyAuthority(
+                                        "PARTICIPANT",
+                                        "ROLE_PARTICIPANT"
+                                )
 
                                 .requestMatchers(
                                         HttpMethod.GET,
@@ -165,6 +202,7 @@ public class SecurityConfig {
                                         "ROLE_ADMIN",
                                         "ROLE_ORGANIZER"
                                 )
+
                                 .requestMatchers(
                                         HttpMethod.GET,
                                         "/sessions/**"
@@ -195,6 +233,14 @@ public class SecurityConfig {
                                         "ADMIN", "ORGANIZER", "ROLE_ADMIN", "ROLE_ORGANIZER"
                                 )
 
+                                .requestMatchers(
+                                        HttpMethod.PATCH,
+                                        "/registrations/*/status"
+                                )
+                                .hasAnyAuthority(
+                                        "ADMIN", "ORGANIZER", "ROLE_ADMIN", "ROLE_ORGANIZER"
+                                )
+
                                 .anyRequest()
                                 .authenticated()
                 )
@@ -214,6 +260,11 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+
+                .addFilterAfter(
+                        rateLimitFilter,
+                        JwtAuthenticationFilter.class
                 );
 
         return http.build();
