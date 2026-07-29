@@ -223,7 +223,11 @@ Las cuentas se bloquean 15 minutos después de 5 intentos fallidos consecutivos.
 
 ## Documentación interactiva (Swagger)
 
-Con la aplicación corriendo: [text](http://localhost:8080/api/swagger-ui/index.html)
+Con la aplicación corriendo:
+
+```
+http://localhost:8080/api/swagger-ui/index.html
+```
 
 Para probar endpoints protegidos: hacer `POST /api/auth/login`, copiar el `accessToken`, clic en `Authorize` y pegarlo (sin el prefijo `Bearer`).
 
