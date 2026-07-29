@@ -49,3 +49,42 @@ docker compose up -d
 
 Con eso deberían tener PostgreSQL en el puerto 5435 y Redis en el 6380 corriendo vía Docker, y la API en `http://localhost:8080/api`. El perfil `dev` usa Flyway para crear el esquema automáticamente, así que no hay que correr ningún script a mano en local.
 
+## Qué hace cada módulo
+
+### Autenticación (`/auth`)
+
+Registro, login, renovación de token (refresh) y logout. Las contraseñas se guardan con BCrypt, y los refresh tokens se rotan y se guardan hasheados (nunca el token en texto plano) en la tabla `refresh_tokens`.
+
+### Categorías y eventos (`/categories`, `/events`)
+
+CRUD básico de eventos, con modalidades (presencial, virtual, híbrida), estados (borrador, publicado, finalizado, cancelado) y control de cupos. El organizador de un evento sale siempre del token, nunca del body, para que nadie pueda crear un evento a nombre de otra persona.
+
+### Sesiones (`/sessions`, `/events/{eventId}/sessions`)
+
+Esta es la parte que hice yo. Una sesión es una charla o actividad puntual dentro de un evento (por ejemplo, "Charla de arquitectura de software" dentro del evento "Semana de la Ingeniería").
+
+Los 6 endpoints:
+
+| Método | Ruta | Quién puede |
+|---|---|---|
+| GET | `/events/{eventId}/sessions` | Cualquiera |
+| GET | `/sessions/{id}` | Cualquiera |
+| GET | `/sessions/upcoming` | Cualquiera |
+| POST | `/events/{eventId}/sessions` | ADMIN u ORGANIZER dueño del evento |
+| PUT | `/sessions/{id}` | ADMIN u ORGANIZER dueño del evento |
+| DELETE | `/sessions/{id}` | ADMIN u ORGANIZER dueño del evento |
+
+Reglas que se validan:
+
+- Solo un ADMIN o el ORGANIZER dueño del evento pueden crear, editar o borrar sesiones. Si un organizador intenta tocar sesiones de un evento que no es suyo, le responde 403.
+- La sesión tiene que caer dentro del rango de fechas del evento (no puedes crear una charla que empiece antes de que arranque el evento, por ejemplo).
+- No se puede agregar ni editar sesiones si el evento ya está finalizado o cancelado.
+- No se permite repetir el mismo título y la misma hora de inicio dos veces en el mismo evento (responde 409 si se intenta).
+- El borrado es físico de verdad (no como en eventos, que usan borrado lógico), porque la tabla `sessions` no tiene una columna para eso.
+- Los listados soportan paginación y ordenamiento (`?page=0&size=20&sort=startAt,desc`).
+
+### Inscripciones (`/registrations`)
+
+Esta parte es de Alex. Permite que un participante se inscriba a un evento, consulte sus propias inscripciones, las cancele, y que el organizador confirme o rechace inscripciones de sus eventos.
+
+
