@@ -95,3 +95,7 @@ login-block:
   max-attempts: 5
   attempts-window-seconds: 900
   block-duration-seconds: 900
+
+swagger:
+  username: ${SWAGGER_USERNAME}
+  password: ${SWAGGER_PASSWORD}
