@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import ec.edu.ups.icc.academicevents.auth.dtos.AuthResponse;
 import ec.edu.ups.icc.academicevents.auth.dtos.CurrentUserResponse;
@@ -33,7 +34,9 @@ public class AuthController {
                 this.authService = authService;
         }
 
-        @Operation(summary = "Registrar un nuevo usuario", description = "Crea una cuenta de usuario y asigna automáticamente el rol PARTICIPANT.")
+        @Operation(summary = "Registrar un nuevo usuario", description = "Crea una cuenta de usuario y asigna automáticamente el rol PARTICIPANT.", security = {
+                        @SecurityRequirement(name = "bearerAuth")
+        })
         @PostMapping("/register")
         public ResponseEntity<String> register(
                         @Valid @RequestBody RegisterRequest request,
@@ -58,7 +61,9 @@ public class AuthController {
                                                 ClientIpResolver.resolve(httpRequest)));
         }
 
-        @Operation(summary = "Renovar tokens de autenticación", description = "Valida y rota el refresh token, devolviendo un nuevo access token y un nuevo refresh token.")
+        @Operation(summary = "Renovar tokens de autenticación", description = "Valida y rota el refresh token, devolviendo un nuevo access token y un nuevo refresh token.", security = {
+                        @SecurityRequirement(name = "bearerAuth")
+        })
         @PostMapping("/refresh")
         public ResponseEntity<AuthResponse> refresh(
                         @Valid @RequestBody RefreshRequest request,
@@ -78,7 +83,9 @@ public class AuthController {
                 return ResponseEntity.noContent().build();
         }
 
-        @Operation(summary = "Consultar usuario autenticado", description = "Devuelve los datos y roles del usuario identificado por el access token JWT.")
+        @Operation(summary = "Consultar usuario autenticado", description = "Devuelve los datos y roles del usuario identificado por el access token JWT.", security = {
+                        @SecurityRequirement(name = "bearerAuth")
+        })
         @GetMapping("/me")
         public ResponseEntity<CurrentUserResponse> me(
                         Authentication authentication) {
